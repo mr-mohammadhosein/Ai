@@ -1,66 +1,361 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Chat Stream Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>چت با Gemini</title>
+  
+  <!-- Import Font -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  
+  <!-- Import Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <style>
-    body { font-family: sans-serif; direction: rtl; }
-    #messages { border: 1px solid #ccc; padding: 10px; min-height: 100px; margin-bottom: 10px; }
-    #userInput { width: 80%; }
-    #sendBtn { width: 15%; }
+    /* --- Global Styles & Resets --- */
+    :root {
+      --bg-color: #1a1a1a;
+      --surface-color: #2c2c2c;
+      --primary-color: #8e44ad;
+      --text-color: #f0f0f0;
+      --user-bubble-color: #005c4b;
+      --gemini-bubble-color: #3a3f47;
+      --font-family: 'Vazirmatn', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-family);
+    }
+
+    /* --- Main Layout --- */
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background-color: var(--surface-color);
+      padding: 15px 20px;
+      text-align: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+    
+    header h1 {
+        font-size: 1.2rem;
+        font-weight: 500;
+    }
+
+    #messages-container {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    /* --- Message Bubbles --- */
+    .message-bubble {
+      max-width: 75%;
+      padding: 12px 18px;
+      border-radius: 18px;
+      line-height: 1.7;
+      word-wrap: break-word;
+      /* CSS کلیدی برای نمایش استریم */
+      white-space: pre-wrap;
+    }
+
+    .user-message {
+      background-color: var(--user-bubble-color);
+      color: white;
+      align-self: flex-start; /* RTL: start is right */
+      border-bottom-right-radius: 4px;
+    }
+
+    .gemini-message {
+      background-color: var(--gemini-bubble-color);
+      align-self: flex-end; /* RTL: end is left */
+      border-bottom-left-radius: 4px;
+    }
+
+    /* --- Typing Indicator --- */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .typing-indicator span {
+      height: 8px;
+      width: 8px;
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1.0); }
+    }
+
+    /* --- Markdown Content Styling --- */
+    .gemini-message pre {
+        background-color: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        direction: ltr; /* Code should always be LTR */
+        text-align: left;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.9rem;
+        white-space: pre; /* Override pre-wrap for code blocks */
+    }
+    .gemini-message code {
+        font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .gemini-message p { margin: 0.5em 0; white-space: normal; }
+    .gemini-message ul, .gemini-message ol { padding-right: 20px; white-space: normal; }
+    .gemini-message a { color: #58a6ff; text-decoration: none; }
+    .gemini-message a:hover { text-decoration: underline; }
+
+    /* --- Input Area --- */
+    .input-area {
+      display: flex;
+      align-items: center;
+      padding: 10px 15px;
+      background-color: var(--surface-color);
+      flex-shrink: 0;
+    }
+
+    #chat-form {
+      display: flex;
+      width: 100%;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    #userInput {
+      flex-grow: 1;
+      border: none;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 12px 15px;
+      border-radius: 20px;
+      resize: none;
+      font-family: var(--font-family);
+      font-size: 1rem;
+      line-height: 1.4;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    #userInput:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--primary-color);
+    }
+    
+    #userInput::placeholder {
+        color: #888;
+    }
+
+    #sendBtn {
+      background-color: var(--primary-color);
+      border: none;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+
+    #sendBtn:hover {
+      background-color: #9b59b6;
+      transform: scale(1.1);
+    }
+    
+    #sendBtn:disabled {
+        background-color: #555;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    #sendBtn svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+    
+    /* --- Custom Scrollbar --- */
+    #messages-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    #messages-container::-webkit-scrollbar-track {
+      background: var(--surface-color);
+    }
+    #messages-container::-webkit-scrollbar-thumb {
+      background-color: var(--primary-color);
+      border-radius: 10px;
+      border: 2px solid var(--surface-color);
+    }
   </style>
 </head>
 <body>
-  <h2>چت با Gemini (Stream)</h2>
-  <div id="messages"></div>
-  <input id="userInput" type="text" placeholder="پیام خود را بنویسید..." />
-  <button id="sendBtn">ارسال</button>
+
+  <div class="chat-wrapper">
+    <header>
+      <h1>چت با Gemini</h1>
+    </header>
+
+    <main id="messages-container"></main>
+
+    <div class="input-area">
+      <form id="chat-form">
+        <textarea id="userInput" placeholder="پیام خود را بنویسید..." rows="1"></textarea>
+        <button id="sendBtn" type="submit">
+          <svg viewBox="0 0 24 24">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
 
   <script>
-    const messagesDiv = document.getElementById('messages');
+    const messagesContainer = document.getElementById('messages-container');
+    const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
+    
+    userInput.addEventListener('input', () => {
+        userInput.style.height = 'auto';
+        userInput.style.height = (userInput.scrollHeight) + 'px';
+    });
+    
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleUserMessage();
+    });
 
-    sendBtn.onclick = async function() {
-      messagesDiv.innerHTML = '';
-      const message = userInput.value;
-      if (!message) return;
+    window.addEventListener('load', () => {
+        displayMessage("سلام! چطور میتونم کمکتون کنم؟", "gemini");
+    });
 
-      // ارسال پیام به API
-      const response = await fetch('/api/chat/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-      });
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 
-      if (!response.body) {
-        messagesDiv.innerText = 'خطا در دریافت پاسخ';
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        // هر chunk را جدا کن و نمایش بده
-        let parts = buffer.split('\n\n');
-        buffer = parts.pop(); // آخرین ناقص را نگه دار
-
-        for (let part of parts) {
-          if (part.startsWith('data:')) {
-            try {
-              const data = JSON.parse(part.replace('data: ', '').replace('data:', ''));
-              messagesDiv.innerHTML += data.text.replace(/\n/g, '<br>');
-            } catch (e) {}
-          }
+    function displayMessage(text, sender, isLoading = false) {
+        const bubble = document.createElement('div');
+        bubble.classList.add('message-bubble', `${sender}-message`);
+        
+        if (isLoading) {
+            bubble.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+        } else {
+             // برای پیام‌های اولیه، از markdown استفاده می‌کنیم
+            bubble.innerHTML = (sender === 'gemini') ? marked.parse(text) : text;
         }
-      }
-    };
+        
+        messagesContainer.appendChild(bubble);
+        scrollToBottom();
+        return bubble;
+    }
+
+    async function handleUserMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        displayMessage(message, 'user');
+
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        userInput.focus();
+
+        sendBtn.disabled = true;
+        userInput.disabled = true;
+
+        const geminiBubble = displayMessage('', 'gemini', true);
+        
+        try {
+            const response = await fetch('https://aigemini.pythonanywhere.com/api/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(`خطای سرور: ${response.statusText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponseText = '';
+            let firstChunk = true;
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                // **تغییر اصلی اینجاست: پردازش آنی هر تکه از پیام**
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        try {
+                            const dataStr = line.replace(/^data: ?/, '');
+                            if (dataStr.trim()) {
+                                const data = JSON.parse(dataStr);
+                                const textChunk = data.text;
+                                fullResponseText += textChunk;
+
+                                if (firstChunk) {
+                                    geminiBubble.innerHTML = ''; // حذف انیمیشن "در حال تایپ"
+                                    firstChunk = false;
+                                }
+                                
+                                // متن خام را مستقیما اضافه می‌کنیم تا حس تایپ زنده ایجاد شود
+                                geminiBubble.textContent += textChunk;
+                                scrollToBottom();
+                            }
+                        } catch (e) {
+                            console.error('خطا در پردازش JSON:', line, e);
+                        }
+                    }
+                }
+            }
+
+            // **مرحله نهایی: پس از اتمام استریم، کل متن را با Markdown رندر می‌کنیم**
+            geminiBubble.innerHTML = marked.parse(fullResponseText);
+            scrollToBottom();
+
+        } catch (error) {
+            console.error('خطا در ارتباط با API:', error);
+            geminiBubble.innerHTML = `<strong>خطا:</strong> متاسفانه مشکلی در ارتباط با سرور پیش آمد. لطفا دوباره تلاش کنید.`;
+            geminiBubble.style.color = '#ff8a80';
+        } finally {
+            sendBtn.disabled = false;
+            userInput.disabled = false;
+            userInput.focus();
+        }
+    }
   </script>
 </body>
 </html>

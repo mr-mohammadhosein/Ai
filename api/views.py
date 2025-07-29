@@ -23,7 +23,7 @@ safety = [
 
 # هیستوری و چت گلوبال
 history = []
-chat = None
+chat = ''
 
 # اینیت کردن چت Gemini با هیستوری دیتابیس
 def init(request):
@@ -69,4 +69,7 @@ def response_streaming_view(request):
             Message.objects.create(role='user', content=user_message)
             Message.objects.create(role='model', content=full_text)
 
-    return StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['X-Accel-Buffering'] = 'no'  # این خط کلیدی است
+    response['Cache-Control'] = 'no-cache' # برای اطمینان بیشتر
+    return response
