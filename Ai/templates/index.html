@@ -78,55 +78,54 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             chatForm.querySelector('button[type="submit"]').disabled = true;
 
-            // اول پیام رو بفرستیم به بک‌اند تا chat.send_message_stream فعال بشه
-            fetch('/api/chat/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
-            }).then(() => {
-                const eventSource = new EventSource('/api/chat/');
-                let finalMessage = '';
-                eventSource.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    finalMessage += data.text;
-
-                    const existing = document.getElementById('ai-typing');
-                    if (existing) {
-                        existing.querySelector('p').innerText = finalMessage;
-                    } else {
-                        const msgDiv = document.createElement('div');
-                        msgDiv.id = 'ai-typing';
-                        msgDiv.className = 'chat-message';
-                        msgDiv.innerHTML = `
-                            <div class="flex items-start space-x-2 space-x-reverse">
-                                <div class="flex-1">
-                                    <div class="bg-gray-100 p-4 rounded-xl rounded-tr-none max-w-3xl">
-                                        <p class="text-gray-800">${finalMessage}</p>
-                                    </div>
-                                    <div class="text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>
-                                </div>
-                            </div>
-                        `;
-                        chatContainer.appendChild(msgDiv);
+            // ارسال پیام و دریافت استریم با XMLHttpRequest (SSE با POST)
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/chat/', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            let finalMessage = '';
+            let aiTypingDiv = null;
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 3 || xhr.readyState === 4) {
+                    // پردازش استریم
+                    const parts = xhr.responseText.split('\n\n');
+                    for (let part of parts) {
+                        if (part.startsWith('data:')) {
+                            try {
+                                const data = JSON.parse(part.slice(5).trim());
+                                finalMessage += data.text;
+                                if (!aiTypingDiv) {
+                                    aiTypingDiv = document.createElement('div');
+                                    aiTypingDiv.id = 'ai-typing';
+                                    aiTypingDiv.className = 'chat-message';
+                                    aiTypingDiv.innerHTML = `
+                                        <div class="flex items-start space-x-2 space-x-reverse">
+                                            <div class="flex-1">
+                                                <div class="bg-gray-100 p-4 rounded-xl rounded-tr-none max-w-3xl">
+                                                    <p class="text-gray-800"></p>
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    chatContainer.appendChild(aiTypingDiv);
+                                }
+                                aiTypingDiv.querySelector('p').innerText = finalMessage;
+                                chatContainer.scrollTop = chatContainer.scrollHeight;
+                            } catch (e) {}
+                        }
                     }
-
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                };
-
-                eventSource.onerror = () => {
-                    eventSource.close();
+                }
+                if (xhr.readyState === 4) {
                     typingIndicator.classList.add('hidden');
                     chatForm.querySelector('button[type="submit"]').disabled = false;
-                };
-
-                eventSource.onopen = () => {
-                    typingIndicator.classList.add('hidden');
-                };
-            }).catch(() => {
+                }
+            };
+            xhr.onerror = function() {
                 typingIndicator.classList.add('hidden');
                 addMessageToChat('خطا در ارتباط با سرور', 'ai');
                 chatForm.querySelector('button[type="submit"]').disabled = false;
-            });
+            };
+            xhr.send(JSON.stringify({ message }));
         });
 
         function addMessageToChat(message, sender) {
