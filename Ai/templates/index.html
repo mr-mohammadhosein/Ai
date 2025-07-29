@@ -86,7 +86,6 @@
             }).then(() => {
                 const eventSource = new EventSource('/api/chat/');
                 let finalMessage = '';
-
                 eventSource.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     finalMessage += data.text;

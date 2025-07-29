@@ -51,7 +51,6 @@ def init(request):
     return JsonResponse({'status': 'success'})
 
 
-# استریم پاسخ مدل با EventStream
 def response_streaming_view(request):
     global chat
     body = json.loads(request.body)
