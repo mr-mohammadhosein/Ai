@@ -79,7 +79,7 @@
             chatForm.querySelector('button[type="submit"]').disabled = true;
 
             // اول پیام رو بفرستیم به بک‌اند تا chat.send_message_stream فعال بشه
-            fetch('/api/stream-response/', {
+            fetch('/api/chat/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
