@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>چت با هوش مصنوعی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap');
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #f7f7fa;
+            color: #fff9f9;
+        }
+
+        .chat-message {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        #message-input {
+            background-color: #303030;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #b6b4dd;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        /* Dark mode styles */
+        body.dark {
+            background-color: #212121 !important;
+            color: #e5e7eb !important;
+        }
+
+        body.dark main,
+        body.dark #chat-container {
+            background-color: #212121 !important;
+        }
+
+        body.dark .border-gray-200 {
+            border-color: #23232a !important;
+        }
+
+        body.dark input#message-input {
+            background-color: #23232a !important;
+            color: #e5e7eb !important;
+        }
+
+        body.dark .bg-white {
+            background-color: #23232a !important;
+        }
+
+        body.dark .bg-gray-100 {
+            background-color: #212121 !important;
+        }
+
+        .text-gray-500 {
+            color: #6b7280 !important;
+        }
+
+        body.dark .text-gray-500 {
+            color: #a1a1aa !important;
+        }
+
+        .text-indigo-600 {
+            color: #4f46e5 !important;
+        }
+
+        body.dark .text-indigo-600 {
+            color: #818cf8 !important;
+        }
+
+        .text-indigo-700 {
+            color: #4338ca !important;
+        }
+        
+
+        body.dark .text-indigo-700 {
+            color: #6366f1 !important;
+        }
+
+        .bg-indigo-600 {
+            background-color: #4f46e5 !important;
+        }
+
+        body.dark .bg-indigo-600 {
+            background-color: #303030 !important;
+        }
+
+        .bg-indigo-700 {
+            background-color: #4338ca !important;
+        }
+
+        body.dark .bg-indigo-700 {
+            background-color: #818cf8 !important;
+        }
+
+        .rounded-xl {
+            border-radius: 0.75rem !important;
+        }
+
+        .rounded-full {
+            border-radius: 9999px !important;
+        }
+
+        .shadow-md {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+        }
+
+        /* Ensure chat container is scrollable with fixed max-height */
+        #chat-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        body.dark .ai-message, body.dark .chat-message .text-gray-800 {
+            color: #fff !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center dark" id="body">
+    <div class="flex justify-end p-4 w-full">
+        <button class="p-2 rounded-full hover:bg-gray-200 transition" id="toggle-dark">
+            <i class="">🌜</i>
+        </button>
+    </div>
+    <div class="flex flex-col w-full max-w-2xl flex-1 justify-center items-center">
+        <div id="chat-container" class="flex-1 p-4 overflow-y-auto space-y-4 w-full" style="max-height:60vh;">
+            <!-- Typing indicator (hidden by default) -->
+            <div id="typing-indicator" class="hidden">
+                <div class="flex items-start space-x-2 space-x-reverse">
+                    <div class="bg-indigo-100 p-3 rounded-full">
+                        <i class="fas fa-robot text-indigo-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-gray-100 p-3 rounded-xl rounded-tr-none max-w-xs">
+                            <div class="typing-indicator flex space-x-1 space-x-reverse">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-gray-200 p-4 w-full">
+            <form id="chat-form" class="flex items-center space-x-2 space-x-reverse">
+                <div class="flex-1 relative">
+                    <input
+                        id="message-input"
+                        type="text"
+                        placeholder="هرچه دل تنگت میخواهد بگو..."
+                        class="w-full px-4 py-3 rounded-full border border-gray-300"
+                        autocomplete="off"
+                    >
+                    <button type="button" class="absolute left-3 top-3 text-gray-400 hover:text-gray-600">
+                        <i class="far fa-smile"></i>
+                    </button>
+                </div>
+                <button
+                    type="submit"
+                    class="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                >
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('body').classList.add('dark');
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const chatContainer = document.getElementById('chat-container');
+            const typingIndicator = document.getElementById('typing-indicator');
+
+            chatForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                if (message) {
+                    // Add user message to chat
+                    addMessageToChat(message, 'user');
+                    messageInput.value = '';
+                    // Show typing indicator
+                    typingIndicator.classList.remove('hidden');
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    // Disable send button
+                    chatForm.querySelector('button[type="submit"]').disabled = true;
+                    try {
+                        const res = await fetch('https://aigemini.pythonanywhere.com/api/chat/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message })
+                        });
+                        const data = await res.json();
+                        typingIndicator.classList.add('hidden');
+                        addMessageToChat(data.response, 'ai');
+                    } catch {
+                        typingIndicator.classList.add('hidden');
+                        addMessageToChat('خطا در ارتباط با سرور', 'ai');
+                    }
+                    chatForm.querySelector('button[type="submit"]').disabled = false;
+                }
+            });
+
+            function addMessageToChat(message, sender) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'chat-message';
+
+                if (sender === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="flex items-start justify-end space-x-2 space-x-reverse">
+                            <div class="flex-1">
+                                <div class="bg-indigo-600 text-white p-4 rounded-xl rounded-tl-none max-w-3xl ml-auto">
+                                    <p>${message}</p>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1 text-left">${timeString}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="flex items-start space-x-2 space-x-reverse">
+                            <div class="flex-1">
+                                <div class="bg-gray-100 p-4 rounded-xl rounded-tr-none max-w-3xl">
+                                    <p class="text-gray-800">${message}</p>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">${timeString}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // Dark mode toggle
+            document.getElementById('toggle-dark').addEventListener('click', function() {
+                document.getElementById('body').classList.toggle('dark');
+            });
+
+            // Focus the input field when the page loads
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
